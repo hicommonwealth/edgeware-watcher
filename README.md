@@ -1,1 +1,1 @@
-# edgewarep-watcher
+# edgeware-watcher
