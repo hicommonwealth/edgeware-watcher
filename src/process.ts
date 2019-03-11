@@ -23,3 +23,5 @@ const start = async () => {
     }, INTERVAL_LENGTH)
   });
 }
+
+start();
