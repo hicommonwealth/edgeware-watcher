@@ -8,7 +8,8 @@
   "scripts": {
     "check-types": "tsc",
     "build": "./node_modules/.bin/babel-node ./src --out-dir lib --extensions '.ts,.tsx'",
-    "start": "yarn build && node ./lib/index.js"
+    "start": "yarn build && node ./lib/index.js",
+    "process": "yarn build && node ./lib/process.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
@@ -28,6 +29,7 @@
     "@polkadot/api": "^0.46.7",
     "crypto-js": "^3.1.9-1",
     "dotenv": "^6.2.0",
+    "mongodb": "^3.1.13",
     "request": "^2.88.0",
     "rxjs": "^6.4.0"
   }

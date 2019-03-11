@@ -5,6 +5,7 @@ import { VotingTypes } from './types/voting';
 import { GovernanceTypes } from './types/governance';
 import { ApiOptions } from '@polkadot/api/types';
 import { switchMap } from 'rxjs/operators';
+import db from './db';
 
 let seenBlocks = {}
 let processingQueue = [];
@@ -15,7 +16,7 @@ const getEventSections = () => {
   ];
 }
 
-const initApiRx = (remoteNodeUrl?: string) => {
+export const initApiRx = (remoteNodeUrl?: string) => {
   if (!remoteNodeUrl) {
     remoteNodeUrl = 'ws://localhost:9944';
   }
@@ -88,6 +89,7 @@ const handleEventSubscription = async (events) => {
 
       // remove this log if not needed
       console.log('Event Received: ' + Date.now() + ": " + JSON.stringify(eventObj));
+      await db.insert(eventObj);
     }
   });
 };

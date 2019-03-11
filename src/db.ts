@@ -44,4 +44,34 @@ var insert = async function(data) {
     await db.collection(collectionName).insertOne(data);
 }
 
+var findUnprocessedAttestations = async function() {
+    if(!state.conn) {
+        await connect();
+    }
+
+    const db = state.conn.db(process.env.MONGO_DB);
+    return await db.collection(collectionName)
+        .find({ section: 'identity', processed: {
+            $exists: true,
+        }})
+        .sort( [['_id', -1]] )
+        .toArray()
+}
+
+var processAttestation = async function(attestation) {
+    if(!state.conn) {
+        await connect();
+    }
+
+    const db = state.conn.db(process.env.MONGO_DB);
+    return await db.collection(collectionName)
+        .update(
+          {_id: attestation._id},
+          { $set: {
+              processed: true,
+            }
+          }
+        );
+}
+
 module.exports = { connect, close, insert }
