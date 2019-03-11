@@ -22,3 +22,4 @@ MONGO_COLLECTION=event_data
 Ensure you have mongodb installed locally or have a remote node you can configure with in the configuration settings above. Install the node modules using `yarn` or `npm`.
 To run the watcher (which by default polls for all events and prints them)
 `yarn start`
+To change the options, simply change the function that runs on start.

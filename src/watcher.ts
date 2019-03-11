@@ -1,4 +1,3 @@
-import request from 'request';
 import { ApiRx } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { IdentityTypes } from './types/identity';

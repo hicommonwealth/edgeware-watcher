@@ -1,3 +1,5 @@
+import request from 'request';
+import { isHex, hexToU8a, stringToU8a } from '@polkadot/util';
 import { first, switchMap } from 'rxjs/operators';
 import CryptoJS from 'crypto-js';
 import AES from 'crypto-js/aes';
@@ -27,25 +29,21 @@ export const processAttestEvent = async (api: ApiRx, event) => {
     if (decryptedData.idHash != SHA256(gistId) ||
         decryptedData.author != response.owner.login ||
         decryptedData.sender != eventTxSender) {
-      return handleInvalidAttestation(api: ApiRx, decryptedData);
+          return verifyIdentityAttestion(api, decryptedData.identityHash, false);
     }
 
     // Send verify attestion transactions using API
-    return handleValidAttestation(api: ApiRx, decryptedData);
+    return verifyIdentityAttestion(api, decryptedData.identityHash, true);
   }));
 };
 
-export const handleValidAttestation = (api: ApiRx, plainObj) => {
-  // TODO: Parse identity hash out of plainObj correctly
-  return verifyIdentityAttestion(plainObj.identityHash, true, VERIFIER_INDEX);
-}
-
-export const handleInvalidAttestation = (api: ApiRx, plainObj) => {
-  // TODO: Parse identity hash out of plainObj correctly
-  return verifyIdentityAttestion(plainObj.identityHash, false, VERIFIER_INDEX);
-};
-
 export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) => {
+  const keyring = new Keyring();
+  // TODO: make sure seed is properly formatted (32 byte hex string)
+  const seedStr = process.env.PRIVATE_KEY_SEED.padEnd(32, ' ');
+  const seed = isHex(process.env.PRIVATE_KEY_SEED) ? hexToU8a(seedStr) : stringToU8a(seedStr);
+  const user = keyring.addFromSeed(seed);
+
   api.query.system
   // TODO: Add function for reading local key storage
   .accountNonce(keyring.alice.address())
@@ -53,7 +51,7 @@ export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>
     first(),
     switchMap((nonce) =>
       api.tx.identity
-        .verify(identityHash, verifyBool, VERIFIER_INDEX)
+        .verify(identityHash, verifyBool, process.VERIFIER_INDEX)
         .sign(keyring.alice, { nonce })
         .send()
     )
