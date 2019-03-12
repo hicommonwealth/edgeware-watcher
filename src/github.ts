@@ -15,18 +15,17 @@ const getRequestOptions = (gId: string) => ({
 });
 
 export const processAttestEvent = async (api: ApiRx, event) => {
-  let gistId = event;
-  let txSender = event;
-  request(getRequestOptions(gistId))
-  .on('response', function(response) {
-    console.log(response.statusCode) // 200
-    console.log(response.headers['content-type']) // 'image/png'
-  })
-  .pipe(switchMap((response) => {
-    let res = crypto.verifyAttestationWithGist(gistId, txSender, response);
+  let gistId = event.attestation;
+  let txSender = event.sender;
+
+  const handleCallback = (err, res, body) => {
+    let data = JSON.parse(body);
+    let success = crypto.verifyAttestationWithGist(gistId, txSender, data);
     // Send verify attestion transactions using API
-    return verifyIdentityAttestion(api, res.identityHash, res.success);
-  }));
+    return verifyIdentityAttestion(api, event.identityHash, success);
+  }
+
+  request(getRequestOptions(gistId), handleCallback);
 };
 
 export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>  {

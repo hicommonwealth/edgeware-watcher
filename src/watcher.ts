@@ -58,19 +58,15 @@ export const pollInIntervals = async (remoteNodeUrl?: string) => {
   setInterval(() => {
     api.rpc.chain
     .getHeader()
-    .pipe(
-      switchMap((header) => {
-        let blockNumber = JSON.parse(header.toString()).number;
-        if (blockNumber in seenBlocks) {
-          return empty();
-        } else {
-          seenBlocks[blockNumber] = header;
-          return api.query.system.events.at(header.hash);
-        }
-
-
-      })
-    )
+    .pipe(switchMap((header) => {
+      let blockNumber = JSON.parse(header.toString()).number;
+      if (blockNumber in seenBlocks) {
+        return empty();
+      } else {
+        seenBlocks[blockNumber] = header;
+        return api.query.system.events.at(header.hash);
+      }
+    }))
     .subscribe(handleEventSubscription);
   }, 2000)
 };

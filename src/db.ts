@@ -53,7 +53,7 @@ export const findUnprocessedAttestations = async function() {
       section: 'identity',
       method: 'Attest',
       processed: {
-        $exists: true,
+        $exists: false,
       }
     })
     .sort( [['_id', -1]] )
@@ -68,9 +68,27 @@ export const processAttestation = async function(attestation) {
   const db = state.conn.db(process.env.MONGO_DB);
   return await db.collection(collectionName)
     .update(
-      {_id: attestation._id},
+      { _id: attestation._id},
       { $set: {
           processed: true,
+        }
+      }
+    );
+}
+
+export const processInvalidAttestation = async function(data) {
+  if (!state.conn) {
+    await connect();
+  }
+
+  const db = state.conn.db(process.env.MONGO_DB);
+  return await db.collection(collectionName)
+    .update(
+      { _id: data._id },
+      {
+        $set: {
+          processed: true,
+          valid: false,
         }
       }
     );
