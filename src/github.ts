@@ -4,6 +4,7 @@ import { first, switchMap } from 'rxjs/operators';
 import { ApiRx } from '@polkadot/api';
 import Keyring from '@polkadot/keyring';
 import * as crypto from './crypto';
+import { blake2AsHex } from '@polkadot/util-crypto';
 
 const getRequestOptions = (gId: string) => ({
   url: `https://api.github.com/gists/${gId}`,
@@ -56,3 +57,13 @@ export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>
     }
   });
 };
+
+export const createGist = (data) => {
+  //0x995e957d368c817e5d64eab9757991a10001d8c6f3733646824da2c006ecc64e
+  let idTypeHex = hexToU8a(data.identityType.toString('hex'));
+  let idHex = hexToU8a(data.identity.toString('hex'));
+  console.log(idTypeHex, idHex);
+  let identityHash = blake2AsHex(`${data.identityType}${data.identity}`, 256);
+  console.log(identityHash);
+  // let encryptedData = crypto.encrypt(data);  
+}

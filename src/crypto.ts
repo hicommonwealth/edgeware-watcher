@@ -5,17 +5,8 @@ import SHA256 from 'crypto-js/sha256'
 const KEY = 'commonwealth-identity-service';
 
 export const encrypt = (data) => {
-    if (!data.hasOwnProperty('identity') ||
-      !data.hasOwnProperty('identityType') ||
-      !data.hasOwnProperty('identityHash') ||
-      !data.hasOwnProperty('sender')
-    ) {
-      console.log(`Data is inproperly formatted: ${data}`);
-      process.exit(-1);
-    } else {
-      const cipherText = AES.encrypt(data, KEY).toString();
-      return cipherText;
-    }
+  const cipherText = AES.encrypt(data, KEY).toString();
+  return cipherText;
 }
 
 export const decrypt = (data) => {
