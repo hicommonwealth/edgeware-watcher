@@ -5,7 +5,9 @@ import { VotingTypes } from './types/voting';
 import { GovernanceTypes } from './types/governance';
 import { ApiOptions } from '@polkadot/api/types';
 import { switchMap } from 'rxjs/operators';
-import db from './db';
+import { empty, of } from 'rxjs';
+
+import * as db from './db';
 
 let seenBlocks = {}
 let processingQueue = [];
@@ -60,11 +62,13 @@ export const pollInIntervals = async (remoteNodeUrl?: string) => {
       switchMap((header) => {
         let blockNumber = JSON.parse(header.toString()).number;
         if (blockNumber in seenBlocks) {
-            return;
+          return empty();
         } else {
-            seenBlocks[blockNumber] = header;
-            return api.query.system.events.at(header.hash);
+          seenBlocks[blockNumber] = header;
+          return api.query.system.events.at(header.hash);
         }
+
+
       })
     )
     .subscribe(handleEventSubscription);
