@@ -3,6 +3,8 @@ The edgeware watcher is an event listener for storing and processing Edgeware ev
 
 The first instantiation of the watcher is meant to serve as a daemon for Commonwealth's Identity Verification Service. Our validating nodes will have authority to verify identities that are registered on Edgeware. We will analyze Github attestations that users submit on-chain, ensuring that the attestations are valid proofs of ownership over Github accounts. This marks the first step towards implementing Edgeware's identity vision.
 
+Included in this repo is the ability to create gists as well. In order to play around with functionality that requires Github authentication, add the necessary Github environment variables to the `.env` file described below.
+
 # Configuration
 Create a `.env` file in the root directory with the following information.
 ```
@@ -17,6 +19,10 @@ MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DB=substrate_events
 MONGO_COLLECTION=event_data
+
+# Github config
+GITHUB_USERNAME=blahblah
+GITHUB_PASSWORD=1234567890
 ```
 # Usage
 Ensure you have mongodb installed locally or have a remote node you can configure with in the configuration settings above. Install the node modules using `yarn` or `npm`.
