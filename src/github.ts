@@ -1,10 +1,12 @@
 import request from 'request';
-import { isHex, hexToU8a, stringToU8a } from '@polkadot/util';
+import { isHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
 import { first, switchMap } from 'rxjs/operators';
 import { ApiRx } from '@polkadot/api';
 import Keyring from '@polkadot/keyring';
 import * as crypto from './crypto';
 import { blake2AsHex } from '@polkadot/util-crypto';
+import { Vector, Text, U8a } from '@polkadot/types';
+import github from 'github-api';
 
 const getRequestOptions = (gId: string) => ({
   url: `https://api.github.com/gists/${gId}`,
@@ -58,12 +60,42 @@ export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>
   });
 };
 
-export const createGist = (data) => {
-  //0x995e957d368c817e5d64eab9757991a10001d8c6f3733646824da2c006ecc64e
-  let idTypeHex = hexToU8a(data.identityType.toString('hex'));
-  let idHex = hexToU8a(data.identity.toString('hex'));
-  console.log(idTypeHex, idHex);
-  let identityHash = blake2AsHex(`${data.identityType}${data.identity}`, 256);
-  console.log(identityHash);
-  // let encryptedData = crypto.encrypt(data);  
+export const createGist = async (data) => {
+  let identityHash = blake2AsHex(
+    u8aConcat(
+      new Text(data.identityType).toU8a(),
+      new Text(data.identity).toU8a()
+    )
+  )
+
+  let encryptedContent = crypto.encrypt({
+    identityHash: identityHash,
+    ...data,
+  });
+
+  console.log(encryptedContent);
+  var gh = new github({
+     username: process.env.GITHUB_USERNAME,
+     password: process.env.GITHUB_PASSWORD,
+  });
+  let gist = gh.getGist();
+  let result = await gist.create({
+    public: true,
+    description: 'Edgeware Identity Attestation',
+    files: {
+      proof: {
+        content: encryptedContent,
+      }
+    }
+  });
+  console.log(result);
+  // }).then(function({data}) {
+  //    // Promises!
+  //    let createdGist = data;
+  //    return gist.read();
+  // }).then(function({data}) {
+  //    let retrievedGist = data;
+  //    // do interesting things
+  // });
+  // // let encryptedData = crypto.encrypt(data);  
 }
