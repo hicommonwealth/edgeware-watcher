@@ -31,22 +31,23 @@ export const processAttestEvent = async (api: ApiRx, event) => {
   request(getRequestOptions(gistId), handleCallback);
 };
 
-export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>  {
+export const verifyIdentityAttestion = (api: ApiRx, identityHash: string, approve: bool) =>  {
   const keyring = new Keyring();
   // TODO: make sure seed is properly formatted (32 byte hex string)
   const seedStr = process.env.PRIVATE_KEY_SEED.padEnd(32, ' ');
   const seed = isHex(process.env.PRIVATE_KEY_SEED) ? hexToU8a(seedStr) : stringToU8a(seedStr);
   const user = keyring.addFromSeed(seed);
-
+  const cArgs: CodecArg[] = [identityHash, approve, process.env.VERIFIER_INDEX];
+  // let cArgs: CodecArg[] = [identityHash, approve, process.env.VERIFIER_INDEX];
+  console.log(approve, identityHash)
   api.query.system
-  // TODO: Add function for reading local key storage
-  .accountNonce(keyring.alice.address())
+  .accountNonce(user.address())
   .pipe(
     first(),
     switchMap((nonce) =>
       api.tx.identity
-        .verify(identityHash, verifyBool, process.env.VERIFIER_INDEX)
-        .sign(keyring, { nonce })
+        .verifyOrDeny(...cArgs)
+        .sign(user, { nonce })
         .send()
     )
   )
@@ -55,6 +56,7 @@ export const verifyIdentityAttestion = (api: ApiRx, identityHash, verifyBool) =>
       console.log(`Done!`);
       return true;
     } else {
+      console.log(status);
       return false;
     }
   });
@@ -89,13 +91,4 @@ export const createGist = async (data) => {
     }
   });
   console.log(result);
-  // }).then(function({data}) {
-  //    // Promises!
-  //    let createdGist = data;
-  //    return gist.read();
-  // }).then(function({data}) {
-  //    let retrievedGist = data;
-  //    // do interesting things
-  // });
-  // // let encryptedData = crypto.encrypt(data);  
 }

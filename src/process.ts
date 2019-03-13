@@ -21,6 +21,7 @@ export const poll = async (remoteUrlString?: string) => {
     // Every so often we poll the database for unprocessed events
     setInterval(async () => {
       let attestations = await db.findUnprocessedAttestations();
+      console.log(attestations);
       if (attestations.length > 0) {
         console.log(`Processing ${attestations.length} attestions`);
       }

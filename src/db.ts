@@ -52,9 +52,10 @@ export const findUnprocessedAttestations = async function() {
     .find({
       section: 'identity',
       method: 'Attest',
-      processed: {
-        $exists: false,
-      }
+      $or: [
+        { processed: { $exists: false } },
+        { processed: false},
+      ],
     })
     .sort( [['_id', -1]] )
     .toArray()
