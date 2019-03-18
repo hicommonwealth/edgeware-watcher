@@ -1,4 +1,4 @@
-import { ApiRx } from '@polkadot/api';
+import { ApiRx, ApiPromise } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { IdentityTypes } from './types/identity';
 import { VotingTypes } from './types/voting';
@@ -40,6 +40,31 @@ export const initApiRx = (remoteNodeUrl?: string) => {
     },
   };
   const api = new ApiRx(options);
+  return api;
+};
+
+export const initApiPromise = (remoteNodeUrl?: string) => {
+  if (!remoteNodeUrl) {
+    remoteNodeUrl = 'ws://localhost:9944';
+  }
+
+  if (remoteNodeUrl.indexOf('ws://') === -1) {
+    remoteNodeUrl = `ws://${remoteNodeUrl}`;
+  }
+
+  if (remoteNodeUrl.indexOf(':9944') === -1) {
+    remoteNodeUrl = `${remoteNodeUrl}:9944`;
+  }
+
+  const options: ApiOptions = {
+    provider : new WsProvider(remoteNodeUrl),
+    types : {
+      ...IdentityTypes,
+      ...GovernanceTypes,
+      ...VotingTypes,
+    },
+  };
+  const api = new ApiPromise(options);
   return api;
 };
 
