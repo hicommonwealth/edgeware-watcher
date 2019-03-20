@@ -13,11 +13,8 @@ function hex2a(hexx) {
   return str;
 }
 
-export const poll = async (remoteUrlString?: string) => {
+export const poll = async (remoteUrlString: string) => {
   db.connect().then(async () => {
-    const api = await watcher.initApiRx(remoteUrlString)
-      .isReady
-      .toPromise();
     // Every so often we poll the database for unprocessed events
     setInterval(async () => {
       let attestations = await db.findUnprocessedAttestations();
@@ -37,9 +34,9 @@ export const poll = async (remoteUrlString?: string) => {
           identity: hex2a(data[4].slice(2)),
         }
 
-        let success = await github.processAttestEvent(api, parsedData);
+        let success = await github.processAttestEvent(remoteUrlString, parsedData);
         // If success, mark event as processed in the database
-        if (success) {
+        if (false) {
           await db.processAttestation(a);
         }
       }))
