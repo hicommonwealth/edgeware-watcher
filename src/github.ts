@@ -33,19 +33,13 @@ export const processAttestEvent = async (remoteUrlString: string, event) => {
 };
 
 export const verifyIdentityAttestion = async (remoteUrlString: string, identityHash: string, approve: bool) =>  {
-  const keyring = new Keyring();
-  // TODO: make sure seed is properly formatted (32 byte hex string)
-  const seedStr = process.env.PRIVATE_KEY_SEED.padEnd(32, ' ');
-  const seed = isHex(process.env.PRIVATE_KEY_SEED) ? hexToU8a(seedStr) : stringToU8a(seedStr);
-  const user = keyring.addFromSeed(seed);
+  const keyring = new Keyring({ type: 'sr25519' });
+  const pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
   const cArgs: CodecArg[] = [identityHash, approve, Number(process.env.VERIFIER_INDEX)];
-  // let cArgs: CodecArg[] = [identityHash, approve, process.env.VERIFIER_INDEX];
-  console.log(approve, identityHash)
-
   const api = await watcher.initApiPromise(remoteUrlString).isReady;
   const result = await api.tx.identity
   .verifyOrDeny(...cArgs)
-  .signAndSend(user);
+  .signAndSend(pair);
   console.log(result, cArgs);
   process.exit(-1);
 };
