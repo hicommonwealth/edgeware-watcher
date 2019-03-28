@@ -1,8 +1,8 @@
 import { ApiRx, ApiPromise } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
-import { IdentityTypes } from './types/identity';
-import { VotingTypes } from './types/voting';
-import { GovernanceTypes } from './types/governance';
+import { IdentityTypes } from './edgeware-node-types/identity';
+import { VotingTypes } from './edgeware-node-types/voting';
+import { GovernanceTypes } from './edgeware-node-types/governance';
 import { ApiOptions } from '@polkadot/api/types';
 import { switchMap } from 'rxjs/operators';
 import { empty, of } from 'rxjs';

@@ -28,8 +28,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.3.4",
-    "@polkadot/api": "^0.46.7",
-    "@polkadot/util-crypto": "^0.35.10",
+    "@polkadot/api": "^0.52.1",
     "bs58": "^4.0.1",
     "commander": "^2.19.0",
     "crypto-js": "^3.1.9-1",
