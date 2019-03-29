@@ -20,7 +20,7 @@ program
   .option('-d, --decrypt', 'Decrypt the Gist fixture')
   .parse(process.argv);
 
-if (program.watch) watcher.pollInIntervals(LOCALHOST);
+if (program.watch) watcher.pollAllEvents(LOCALHOST);
 if (program.process) processor.poll(LOCALHOST);
 if (program.gist) github.createGist({
 	identityType: 'github',

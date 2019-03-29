@@ -40,7 +40,7 @@ export const initApiRx = (remoteNodeUrl?: string) => {
     },
   };
   const api = new ApiRx(options);
-  return api;
+  return api.isReady;
 };
 
 export const initApiPromise = (remoteNodeUrl?: string) => {
@@ -65,40 +65,24 @@ export const initApiPromise = (remoteNodeUrl?: string) => {
     },
   };
   const api = new ApiPromise(options);
-  return api;
+  return api.isReady;
 };
 
 export const pollAllEvents = async (remoteNodeUrl?: string) => {
   // get event filters
   const eventsFilter = getEventSections();
   // get api
-  const api = await initApiRx(remoteNodeUrl).isReady.toPromise();
-  api.query.system.events()
-  .subscribe(handleEventSubscription);
+  const api = await initApiPromise(remoteNodeUrl);
+  api.rpc.chain.subscribeNewHead(async (header) => {
+    const events = await api.query.system.events.at(header.hash);
+    await handleEventSubscription(events);
+  });
 }
-
-export const pollInIntervals = async (remoteNodeUrl?: string) => {
-  // get api
-  const api = await initApiRx(remoteNodeUrl).isReady.toPromise();
-  setInterval(() => {
-    api.rpc.chain
-    .getHeader()
-    .pipe(switchMap((header) => {
-      let blockNumber = JSON.parse(header.toString()).number;
-      if (blockNumber in seenBlocks) {
-        return empty();
-      } else {
-        seenBlocks[blockNumber] = header;
-        return api.query.system.events.at(header.hash);
-      }
-    }))
-    .subscribe(handleEventSubscription);
-  }, 2000)
-};
 
 const handleEventSubscription = async (events) => {
   // get event filters
   const eventsFilter = getEventSections();
+  console.log(events.length);
   events.forEach(async (record) => {
     // extract the event object
     const { event, phase } = record;

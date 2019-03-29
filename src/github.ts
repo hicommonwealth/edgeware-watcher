@@ -4,7 +4,7 @@ import { first, switchMap } from 'rxjs/operators';
 import { ApiRx } from '@polkadot/api';
 import Keyring from '@polkadot/keyring';
 import { blake2AsHex } from '@polkadot/util-crypto';
-import { Vector, Text, U8a } from '@polkadot/types';
+import { Vector, Text, U8a, Hash } from '@polkadot/types';
 import github from 'github-api';
 import * as watcher from './watcher';
 import * as crypto from './crypto';
@@ -32,11 +32,25 @@ export const processAttestEvent = async (remoteUrlString: string, event) => {
   return request(getRequestOptions(gistId), handleCallback);
 };
 
-export const verifyIdentityAttestion = async (remoteUrlString: string, identityHash: string, approve: bool) =>  {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
+export const verifyIdentityAttestion = async (remoteUrlString: string, identityHash: Hash, approve: bool) =>  {
   const cArgs: CodecArg[] = [identityHash, approve, Number(process.env.VERIFIER_INDEX)];
-  const api = await watcher.initApiPromise(remoteUrlString).isReady;
+  const api = await watcher.initApiPromise(remoteUrlString);
+
+  const [chain, nodeName, nodeVersion] = await Promise.all([
+    api.rpc.system.chain(),
+    api.rpc.system.name(),
+    api.rpc.system.version()
+  ]);
+
+  let pair;
+  if (chain.toString() === 'Development') {
+    const keyring = new Keyring({ type: 'sr25519' });
+    pair = keyring.addFromUri('//Alice//stash');
+  } else {
+    const keyring = new Keyring({ type: 'ed25519' });
+    pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
+  }
+
   const result = await api.tx.identity
   .verifyOrDeny(...cArgs)
   .signAndSend(pair);
