@@ -33,7 +33,7 @@ export const processAttestEvent = async (remoteUrlString: string, event) => {
 };
 
 export const verifyIdentityAttestion = async (remoteUrlString: string, identityHash: Hash, approve: bool) =>  {
-  const cArgs: CodecArg[] = [identityHash, approve, Number(process.env.VERIFIER_INDEX)];
+  const cArgs: CodecArg[] = [`${identityHash}`, approve, 1];
   const api = await watcher.initApiPromise(remoteUrlString);
 
   const [chain, nodeName, nodeVersion] = await Promise.all([
@@ -51,9 +51,28 @@ export const verifyIdentityAttestion = async (remoteUrlString: string, identityH
     pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
   }
 
+  console.log(pair.address(), cArgs);;
+  const nonce = await api.query.system.accountNonce(pair.address());
   const result = await api.tx.identity
   .verifyOrDeny(...cArgs)
-  .signAndSend(pair);
+  .sign(pair, { nonce })
+  .send(({ events, status }) => {
+    console.log('Transaction status:', status.type);
+
+    if (status.isFinalized) {
+      console.log('Completed at block hash', status.value.toHex());
+      console.log('Events:');
+
+      events.forEach(({ phase, event: { data, method, section } }) => {
+        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+      });
+
+      if (events.length) {
+        done();
+      }
+    }
+  });
+
   console.log(result, cArgs);
   process.exit(-1);
 };

@@ -40,6 +40,6 @@ export const poll = async (remoteUrlString: string) => {
           await db.processAttestation(a);
         }
       }))
-    }, ONE_SECOND)
+    }, ONE_SECOND * 1)
   });
 }
