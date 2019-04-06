@@ -45,13 +45,13 @@ export const verifyIdentityAttestion = async (remoteUrlString: string, identityH
   let pair;
   if (chain.toString() === 'Development') {
     const keyring = new Keyring({ type: 'sr25519' });
-    pair = keyring.addFromUri('//Alice//stash');
+    pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
   } else {
     const keyring = new Keyring({ type: 'ed25519' });
     pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
   }
 
-  console.log(pair.address(), cArgs);;
+  console.log(pair.address(), pair.type, cArgs);;
   const nonce = await api.query.system.accountNonce(pair.address());
   const result = await api.tx.identity
   .verifyOrDeny(...cArgs)
