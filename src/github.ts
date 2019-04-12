@@ -51,12 +51,12 @@ export const verifyIdentityAttestion = async (remoteUrlString: string, identityH
     pair = keyring.addFromUri(`${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`);
   }
 
-  console.log(pair.address(), pair.type, cArgs);;
   const nonce = await api.query.system.accountNonce(pair.address());
-  const result = await api.tx.identity
-  .verifyOrDeny(...cArgs)
+  const fn = (approve) ? api.tx.identity.verify : api.tx.identity.deny;
+  await fn(...cArgs)
   .sign(pair, { nonce })
   .send(({ events, status }) => {
+    console.log(events, status);
     console.log('Transaction status:', status.type);
 
     if (status.isFinalized) {
