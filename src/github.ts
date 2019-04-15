@@ -28,8 +28,13 @@ export const verifyAttestationWithGist = (gistId: string, txSender: string, data
   if (!data.hasOwnProperty('files') ||
       !data.hasOwnProperty('owner') ||
       !data.files.hasOwnProperty('proof') ||
-      !data.files.proof.hasOwnProperty('content')
+      !data.files.proof.hasOwnProperty('content') ||
+      !data.hasOwnProperty('description')
   ) {
+    return false;
+  }
+
+  if (data.description != 'Edgeware Identity Attestation') {
     return false;
   }
 

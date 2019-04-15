@@ -5,9 +5,9 @@ import * as db from './db';
 import * as github from './github';
 import * as watcher from './watcher';
 
-const ONE_SECOND = 1000
-const ONE_MINUTE = ONE_SECOND * 60
-const INTERVAL_LENGTH = ONE_MINUTE
+const ONE_SECOND = 1000;
+const ONE_MINUTE = ONE_SECOND * 60;
+const INTERVAL_LENGTH = ONE_MINUTE;
 
 function hex2a(hexx) {
   var hex = hexx.toString();//force conversion
