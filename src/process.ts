@@ -22,40 +22,44 @@ export const poll = async (remoteUrlString: string) => {
     // Every so often we poll the database for unprocessed events
     setInterval(async () => {
       let attestations = await db.findUnprocessedAttestations();
+      // only execute processing if there are attestations
       if (attestations.length > 0) {
         console.log(`Processing ${attestations.length} attestions`);
+        let results = await Promise.all(attestations.map(async attestation => {
+          let data = JSON.parse(attestation.data)
+          let parsedData = {
+            attestation: hex2a(data[0].slice(2)),
+            identityHash: data[1],
+            sender: data[2],
+            identityType: (!isHex(data[3])) ? data[3] : hex2a(data[3].slice(2)),
+            identity: hex2a(data[4].slice(2)),
+          }
+  
+          // Currently supporting github verifications only
+          let success;
+          if (parsedData.identityType === 'github') {
+            success = await github.processAttestEvent(remoteUrlString, parsedData);
+          } else {
+            success = false;
+          }
+  
+          return { attestation, parsedData, success };
+        }));
+  
+        // Filter the verifications and denials into separate arrays
+        const positiveHashes = results.filter(r => (r.success)).map(r => (r.parsedData.identityHash));
+        const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
+        const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
+        const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
+  
+        if (positiveHashes.length > 0) {
+          await verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations);
+        }
+  
+        if (negativeHashes.length > 0) {
+          await verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations);
+        }
       }
-
-      let results = await Promise.all(attestations.map(async attestation => {
-        let data = JSON.parse(attestation.data)
-        let parsedData = {
-          attestation: hex2a(data[0].slice(2)),
-          identityHash: data[1],
-          sender: data[2],
-          identityType: (!isHex(data[3])) ? data[3] : hex2a(data[3].slice(2)),
-          identity: hex2a(data[4].slice(2)),
-        }
-
-        // Currently supporting github verifications only
-        let success;
-        if (parsedData.identityType === 'github') {
-          success = await github.processAttestEvent(remoteUrlString, parsedData);
-        } else {
-          success = false;
-        }
-
-        return { attestation, parsedData, success };
-      }));
-
-      // Filter the verifications and denials into separate arrays
-      const positiveHashes = results.filter(r => (r.success)).map(r => (r.parsedData.identityHash));
-      const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
-      const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
-      const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
-
-      await verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations);
-      await verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations);
-
     }, ONE_SECOND * 30)
   });
 }

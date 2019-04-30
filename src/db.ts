@@ -13,7 +13,6 @@ const collectionName = process.env.MONGO_COLLECTION;
 
 // connect to mongo server and store the connection object
 export const connect = async function(url = connectionUrl) {
-  console.log(connectionUrl);
   return new Promise((resolve, reject) => {
     client.connect(url, function (err, resp) {
       if (!err) {
