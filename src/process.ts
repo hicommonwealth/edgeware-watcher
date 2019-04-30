@@ -58,7 +58,7 @@ export const poll = async (remoteUrlString: string) => {
       if (negativeHashes.length > 0) promises.concat(verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations));
 
       await Promise.all(promises);
-    }, ONE_SECOND * 10)
+    }, ONE_SECOND * 30)
   });
 }
 
@@ -73,9 +73,9 @@ export const verifyIdentityAttestion = async (remoteUrlString: string, identityH
   ]);
 
   const suri = `${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`;
-  const keyring = new Keyring({ type: 'sr25519' });
+  const keyring = new Keyring({ type: 'ed25519' });
   const pair = keyring.addFromUri(suri);
-
+  console.log(pair.address());
   const nonce = await api.query.system.accountNonce(pair.address());
   const fn = (approve) ? api.tx.identity.verifyMany : api.tx.identity.denyMany;
   return await fn(...cArgs)
