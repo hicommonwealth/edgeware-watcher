@@ -52,12 +52,10 @@ export const poll = async (remoteUrlString: string) => {
       const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
       const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
       const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
+      console.log(positiveHashes, negativeHashes);
+      await verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations);
+      await verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations);
 
-      let promises = [];
-      if (positiveHashes.length > 0) promises.concat(verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations));
-      if (negativeHashes.length > 0) promises.concat(verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations));
-
-      await Promise.all(promises);
     }, ONE_SECOND * 30)
   });
 }
