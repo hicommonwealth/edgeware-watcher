@@ -52,7 +52,7 @@ export const poll = async (remoteUrlString: string) => {
       const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
       const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
       const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
-      console.log(positiveHashes, negativeHashes);
+
       await verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations);
       await verifyIdentityAttestion(remoteUrlString, negativeHashes, false, negativeAttestations);
 
@@ -63,23 +63,15 @@ export const poll = async (remoteUrlString: string) => {
 export const verifyIdentityAttestion = async (remoteUrlString: string, identityHashes: Vector<Hash>, approve: bool, attestations: any) =>  {
   const cArgs: CodecArg[] = [identityHashes, process.env.VERIFIER_INDEX];
   const api = await watcher.initApiPromise(remoteUrlString);
-
-  const [chain, nodeName, nodeVersion] = await Promise.all([
-    api.rpc.system.chain(),
-    api.rpc.system.name(),
-    api.rpc.system.version()
-  ]);
-
   const suri = `${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`;
   const keyring = new Keyring({ type: 'ed25519' });
   const pair = keyring.addFromUri(suri);
-  console.log(pair.address());
+  console.log(`Sending tx from verifier: ${pair.address()}`);
   const nonce = await api.query.system.accountNonce(pair.address());
   const fn = (approve) ? api.tx.identity.verifyMany : api.tx.identity.denyMany;
   return await fn(...cArgs)
   .sign(pair, { nonce })
   .send(async ({ events, status }) => {
-    console.log(events, status);
     console.log('Transaction status:', status.type);
 
     if (status.isFinalized) {
