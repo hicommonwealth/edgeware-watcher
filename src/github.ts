@@ -104,5 +104,4 @@ export const createGist = async (data) => {
       }
     }
   });
-  console.log(result);
 }

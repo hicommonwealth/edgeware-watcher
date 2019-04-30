@@ -1,5 +1,5 @@
 import Keyring from '@polkadot/keyring';
-import { Vector, Text, U8a, Hash } from '@polkadot/types';
+import { Vector, Hash } from '@polkadot/types';
 import { isHex } from '@polkadot/util';
 import * as db from './db';
 import * as github from './github';
@@ -26,8 +26,8 @@ export const poll = async (remoteUrlString: string) => {
         console.log(`Processing ${attestations.length} attestions`);
       }
 
-      let results = await Promise.all(attestations.map(async a => {
-        let data = JSON.parse(a.data)
+      let results = await Promise.all(attestations.map(async attestation => {
+        let data = JSON.parse(attestation.data)
         let parsedData = {
           attestation: hex2a(data[0].slice(2)),
           identityHash: data[1],
@@ -38,21 +38,20 @@ export const poll = async (remoteUrlString: string) => {
 
         // Currently supporting github verifications only
         let success;
-        console.log(parsedData);
         if (parsedData.identityType === 'github') {
           success = await github.processAttestEvent(remoteUrlString, parsedData);
         } else {
           success = false;
         }
 
-        return { a, parsedData, success };
+        return { attestation, parsedData, success };
       }));
 
       // Filter the verifications and denials into separate arrays
       const positiveHashes = results.filter(r => (r.success)).map(r => (r.parsedData.identityHash));
       const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
-      const positiveAttestations = results.filter(r => (r.success)).map(r => (r.a));
-      const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.a));;
+      const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
+      const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
 
       let promises = [];
       if (positiveHashes.length > 0) promises.concat(verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations));

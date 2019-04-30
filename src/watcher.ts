@@ -1,47 +1,17 @@
-import { ApiRx, ApiPromise } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { IdentityTypes } from './edgeware-node-types/types/identity';
 import { VotingTypes } from './edgeware-node-types/types/voting';
 import { GovernanceTypes } from './edgeware-node-types/types/governance';
 import { ApiOptions } from '@polkadot/api/types';
-import { switchMap } from 'rxjs/operators';
-import { empty, of } from 'rxjs';
 
 import * as db from './db';
-
-let seenBlocks = {}
-let processingQueue = [];
 
 const getEventSections = () => {
   return [
     'all'
   ];
 }
-
-export const initApiRx = (remoteNodeUrl?: string) => {
-  if (!remoteNodeUrl) {
-    remoteNodeUrl = 'ws://localhost:9944';
-  }
-
-  if (remoteNodeUrl.indexOf('ws://') === -1) {
-    remoteNodeUrl = `ws://${remoteNodeUrl}`;
-  }
-
-  if (remoteNodeUrl.indexOf(':9944') === -1) {
-    remoteNodeUrl = `${remoteNodeUrl}:9944`;
-  }
-
-  const options: ApiOptions = {
-    provider : new WsProvider(remoteNodeUrl),
-    types : {
-      ...IdentityTypes,
-      ...GovernanceTypes,
-      ...VotingTypes,
-    },
-  };
-  const api = new ApiRx(options);
-  return api.isReady;
-};
 
 export const initApiPromise = (remoteNodeUrl?: string) => {
   if (!remoteNodeUrl) {
@@ -82,7 +52,6 @@ export const pollAllEvents = async (remoteNodeUrl?: string) => {
 const handleEventSubscription = async (events) => {
   // get event filters
   const eventsFilter = getEventSections();
-  console.log(events.length);
   events.forEach(async (record) => {
     // extract the event object
     const { event, phase } = record;

@@ -7,9 +7,7 @@ import * as crypto from './crypto';
 import program from 'commander';
 
 export const LOCALHOST = 'localhost:9944';
-export const EDGEWARE_TESTNET_ADDR_1 = '18.221.47.154:9944';
-export const EDGEWARE_TESTNET_ADDR_2 = '18.222.29.148:9944';
-export const EDGEWARE_TESTNET_ADDR_3 = '18.223.143.102:9944';
+export const EDGEWARE_TESTNET = '18.223.143.102:9944';
 
 
 program
