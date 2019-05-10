@@ -37,9 +37,11 @@ export const poll = async (remoteUrlString: string) => {
   
           // Currently supporting github verifications only
           let success;
-          if (parsedData.identityType === 'github') {
+          if (parsedData.identityType === 'github' || parsedData.identityType === '\u0018github') {
             success = await github.processAttestEvent(remoteUrlString, parsedData);
           } else {
+            console.log(`Failed with data`);
+            console.log(`${parsedData}\n`);
             success = false;
           }
   
