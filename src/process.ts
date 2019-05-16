@@ -52,7 +52,7 @@ export const poll = async (remoteUrlString: string) => {
         const positiveHashes = results.filter(r => (r.success)).map(r => (r.parsedData.identityHash));
         const negativeHashes = results.filter(r => (!r.success)).map(r => (r.parsedData.identityHash));;
         const positiveAttestations = results.filter(r => (r.success)).map(r => (r.attestation));
-        const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));;
+        const negativeAttestations = results.filter(r => (!r.success)).map(r => (r.attestation));
   
         if (positiveHashes.length > 0) {
           await verifyIdentityAttestion(remoteUrlString, positiveHashes, true, positiveAttestations);
