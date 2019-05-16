@@ -1,6 +1,6 @@
-export const onReceiveEvent = (remoteUrlString: string) => async () => {};
-const processEvent = (remoteUrlString: string) => async () => {};
+import { EdgewareIdentityEvent } from "../eventemitter";
 
-export default (remoteUrlString: string) => ({
-  onReceiveEvent(remoteUrlString),
-});
+// https://twitter.com/drew___stone/status/1128392194434449408
+
+export const onReceiveEvents = async (remoteUrlString: string, events: Array<EdgewareIdentityEvent>) => {};
+const processEvent = async (remoteUrlString: string) => {};

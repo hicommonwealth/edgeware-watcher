@@ -5,9 +5,11 @@ import { u8aConcat, assert, u8aToU8a } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { CodecArg } from '@polkadot/types/types';
 import { Keyring } from '@polkadot/keyring';
+import { Text, Hash, Vector } from '@polkadot/types';
 
 import { insert } from '../db';
 import initApi from '../api';
+import { EdgewareIdentityEvent, EventResult, IdentityResponseData } from '../eventemitter';
 
 const IDENTITY_ENCRYPTION_KEY = 'commonwealth-identity-service';
 
@@ -20,86 +22,97 @@ const hashIdentity = (identityType: string, identity: string) => {
   );
 }
 
-type GithubEdgewareEvent = {
-  attestation: string,
-  sender: string,
-}
-
-type GithubResponseData = {
-  identityType: string,
-  identity: string,
-  sender: string,
-  proof: string,
-  description: string,
-  attestation: string,
-}
-
 const getRequestOptions = (gId: string) => ({
   url: `https://api.github.com/gists/${gId}`,
   headers: { 'User-Agent': 'request', 'Accept': 'application/vnd.github.v3+json' },
   method: 'get',
 });
 
-const onReceiveEvent = (remoteUrlString: string) => async (event: GithubEdgewareEvent) => {
-  try {
-    const response = await axios(getRequestOptions(event.attestation));
-    if (response.data.hasOwnProperty('files')) {
-      if (response.data.files.hasOwnProperty('proof')) {
-        if (!response.data.files.hasOwnProperty('content')) {
-          return Promise.reject(`Malformed response data: ${JSON.stringify(response.data)}`);
-        }
+export const onReceiveEvents = async (remoteUrlString: string, events: Array<EdgewareIdentityEvent>) => {
+  let processedEvents: Array<EventResult> = events.map(e => {
+    return onReceiveEvent(remoteUrlString, e);
+  });
+  // verify successes
+  await submitTransaction(
+    remoteUrlString,
+    processedEvents.filter(e => e.success)
+                      .map(e => e.data.identityHash),
+    true
+  );
+  // reject failures
+  await submitTransaction(
+    remoteUrlString,
+    processedEvents.filter(e => !e.success)
+                      .map(e => e.data.identityHash),
+    false,
+  )
+}
+
+const onReceiveEvent = (remoteUrlString: string, event: EdgewareIdentityEvent) => {
+  const response = await axios(getRequestOptions(event.attestation));
+  if (response.data.hasOwnProperty('files')) {
+    if (response.data.files.hasOwnProperty('proof')) {
+      if (!response.data.files.hasOwnProperty('content')) {
+        return {
+          success: false,
+          data: {
+            ...event,
+            error: `Malformed response data: ${JSON.stringify(response.data)}`
+          },
+        };
       }
     }
-
-    if (response.data.description !== 'Edgeware Identity Attestation') {
-      return Promise.reject(`Incorrect attestation description: ${response.data.description}`);
-    }
-
-    await processEvent(remoteUrlString)({
-      identityType: 'github',
-      identity: response.data.owner.login.toString(),
-      sender: event.sender,
-      proof: response.data.files.proof.content.toString(),
-      description: response.data.description,
-      attestation: event.attestation,
-    });
-  } catch (error) {
-    return Promise.reject(error);
   }
+
+  if (response.data.description !== 'Edgeware Identity Attestation') {
+    return {
+      success: false,
+      data: {
+        ...event,
+        error: `Incorrect attestation description: ${response.data.description}`,
+      },
+    };
+  }
+
+  return processEvent(remoteUrlString, {
+    identityType: 'github',
+    identity: response.data.owner.login.toString(),
+    identityHash: event.identityHash,
+    sender: event.sender,
+    proof: response.data.files.proof.content.toString(),
+    description: response.data.description,
+    attestation: event.attestation,
+    error: undefined,
+  });
 };
 
-const processEvent = (remoteUrlString: string) => async (data: GithubResponseData) => {
+const processEvent = (remoteUrlString: string, data: IdentityResponseData) => {
   const bytes = AES.decrypt(data.proof, IDENTITY_ENCRYPTION_KEY);
   const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   const computedIdentityHash = hashIdentity(data.identityType, data.identity);
 
   if (decryptedData.identityType !== 'github' || decryptedData.identityType !== '\u0018github') {
-    await verifyIdentityAttestion(remoteUrlString)(decryptedData.identityHash.toString(), false);
-    return Promise.reject(`Invalid identity type: ${decryptedData.identityType}`);
+    return { success: false, data: { ...data, error: `Invalid identity type: ${decryptedData.identityType}`} };
   } else if (decryptedData.identity !== data.identity) {
-    await verifyIdentityAttestion(remoteUrlString)(decryptedData.identityHash.toString(), false);
-    return Promise.reject(`Invalid identity: ${decryptedData.identity} != ${data.identity}`);
+    return { success: false, data: { ...data, error: `Invalid identity: ${decryptedData.identity} != ${data.identity}`} };
   } else if (decryptedData.sender !== data.sender) {
-    await verifyIdentityAttestion(remoteUrlString)(decryptedData.identityHash.toString(), false);
-    return Promise.reject(`Invalid Edgeware sender: ${decryptedData.sender} != ${data.sender}`); 
+    return { success: false, data: { ...data, error: `Invalid Edgeware sender: ${decryptedData.sender} != ${data.sender}`} };
   } else if (decryptedData.identityHash !== computedIdentityHash) {
-    await verifyIdentityAttestion(remoteUrlString)(decryptedData.identityHash.toString(), false);
-    return Promise.reject(`Invalid identity hash: ${decryptedData.identityHash} != ${computedIdentityHash}`)
+    return { success: false, data: { ...data, error: `Invalid identity hash: ${decryptedData.identityHash} != ${computedIdentityHash}`} };
   }
 
-  await insert(data);
-  await verifyIdentityAttestion(remoteUrlString)(decryptedData.identityHash.toString(), true)
+  return { success: true, data: data }
 };
 
-const verifyIdentityAttestion = (remoteUrlString: string) => async (identityHash: string, approve: boolean) =>  {
-  const cArgs: CodecArg[] = [identityHash, process.env.VERIFIER_INDEX];
+const submitTransaction = async (remoteUrlString: string, identityHashes: Array<Hash>, approve: boolean) =>  {
+  const cArgs: CodecArg[] = [identityHashes, process.env.VERIFIER_INDEX];
   const api = await initApi(remoteUrlString);
   const suri = `${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`;
   const keyring = new Keyring({ type: 'ed25519' });
   const pair = keyring.addFromUri(suri);
   console.log(`Sending tx from verifier: ${pair.address()}`);
   const nonce = await api.query.system.accountNonce(pair.address());
-  const fn = (approve) ? api.tx.identity.verify : api.tx.identity.deny;
+  const fn = (approve) ? api.tx.identity.verifyMany : api.tx.identity.denyMany;
   return await fn(...cArgs)
   .sign(pair, { nonce })
   .send(async ({ events, status }) => {
@@ -115,7 +128,3 @@ const verifyIdentityAttestion = (remoteUrlString: string) => async (identityHash
     }
   });
 };
-
-export default (remoteUrlString: string) => ({
-  onReceiveEvent(remoteUrlString),
-});
