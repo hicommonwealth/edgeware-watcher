@@ -24,6 +24,7 @@ MONGO_COLLECTION=event_data
 VERIFIER_INDEX=0
 MNEMONIC_PHRASE="bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 DERIVATION_PATH=//Alice
+DERIVED_KEY_TYPE=sr25519
 
 # Github config for creating gists
 GITHUB_USERNAME=blahblah
@@ -41,14 +42,19 @@ yarn process
 ```
 
 # Github Attestations
-A github attestation is simply the gist ID. An example of a valid gist should contain the following properties. It should first and foremost be public and have the stated description. It should then contain a proof with an encrypted blob of content defined below this current snippet.
+A github attestation is simply the gist ID. An example of a valid gist should contain the following properties. It should first and foremost be public and have the stated description. It should then contain a proof with an encrypted blob of content defined below.
 ```
 {
   public: true,
   description: 'Edgeware Identity Attestation',
   files: {
     proof: {
-      content: encryptedContent,
+      content: AES.encrypt('commonwealth-identity-service', {
+        identityHash: "0x995e957d368c817e5d64eab9757991a10001d8c6f3733646824da2c006ecc64e",
+        identityType: "github",
+        identity: "drewstone",
+        sender: "5ERmnP13Gx8ybq64pi2LEGWVqF2AoRCM83UovE9537uRvLA8",
+      }),
     }
   },
   ...

@@ -6,9 +6,8 @@ import { blake2AsHex } from '@polkadot/util-crypto';
 import { CodecArg } from '@polkadot/types/types';
 import { Keyring } from '@polkadot/keyring';
 import { Text, Hash, Vector } from '@polkadot/types';
-
-import { insert } from '../db';
 import initApi from '../api';
+import * as db from '../db';
 import { EdgewareIdentityEvent, EventResult, IdentityResponseData } from '../eventemitter';
 
 const IDENTITY_ENCRYPTION_KEY = 'commonwealth-identity-service';
@@ -28,10 +27,19 @@ const getRequestOptions = (gId: string) => ({
   method: 'get',
 });
 
+const insertAllEvents = async (events: Array<EdgewareIdentityEvent>) => {
+  const promises = events.map(async e => (await db.insert(e)));
+  await Promise.all(promises);
+};
+
 export const onReceiveEvents = async (remoteUrlString: string, events: Array<EdgewareIdentityEvent>) => {
-  let processedEvents: Array<EventResult> = events.map(e => {
-    return onReceiveEvent(remoteUrlString, e);
-  });
+  if (events.length === 0) return;
+  // Parse Attest events
+  let promises = events.map(async e => (await onReceiveEvent(remoteUrlString, e)));
+  // Unwrap promises
+  let processedEvents = await Promise.all(promises);
+  console.log(processedEvents);
+  console.log(`III | Processed events: ${JSON.stringify(processedEvents)}`);
   // verify successes
   await submitTransaction(
     remoteUrlString,
@@ -45,33 +53,22 @@ export const onReceiveEvents = async (remoteUrlString: string, events: Array<Edg
     processedEvents.filter(e => !e.success)
                       .map(e => e.data.identityHash),
     false,
-  )
+  );
+
+  await insertAllEvents(events);
 }
 
-const onReceiveEvent = (remoteUrlString: string, event: EdgewareIdentityEvent) => {
+const formatError = (event: EdgewareIdentityEvent | IdentityResponseData, error: string) => 
+  ({ success: false, data: { ...event, error: error } });
+
+const onReceiveEvent = async (remoteUrlString: string, event: EdgewareIdentityEvent) => {
   const response = await axios(getRequestOptions(event.attestation));
-  if (response.data.hasOwnProperty('files')) {
-    if (response.data.files.hasOwnProperty('proof')) {
-      if (!response.data.files.hasOwnProperty('content')) {
-        return {
-          success: false,
-          data: {
-            ...event,
-            error: `Malformed response data: ${JSON.stringify(response.data)}`
-          },
-        };
-      }
-    }
-  }
+  if (!response.data.hasOwnProperty('files')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
+  if (!response.data.files.hasOwnProperty('proof')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
+  if (!response.data.files.proof.hasOwnProperty('content')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
 
   if (response.data.description !== 'Edgeware Identity Attestation') {
-    return {
-      success: false,
-      data: {
-        ...event,
-        error: `Incorrect attestation description: ${response.data.description}`,
-      },
-    };
+    return formatError(event, `Incorrect attestation description: ${response.data.description}`);
   }
 
   return processEvent(remoteUrlString, {
@@ -90,40 +87,45 @@ const processEvent = (remoteUrlString: string, data: IdentityResponseData) => {
   const bytes = AES.decrypt(data.proof, IDENTITY_ENCRYPTION_KEY);
   const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
   const computedIdentityHash = hashIdentity(data.identityType, data.identity);
-
-  if (decryptedData.identityType !== 'github' || decryptedData.identityType !== '\u0018github') {
-    return { success: false, data: { ...data, error: `Invalid identity type: ${decryptedData.identityType}`} };
+  // Apply validation checks
+  if (decryptedData.identityType !== 'github') {
+    return formatError(data, `Invalid identity type: ${decryptedData.identityType}`);
   } else if (decryptedData.identity !== data.identity) {
-    return { success: false, data: { ...data, error: `Invalid identity: ${decryptedData.identity} != ${data.identity}`} };
+    return formatError(data, `Invalid identity: ${decryptedData.identity} != ${data.identity}`);
   } else if (decryptedData.sender !== data.sender) {
-    return { success: false, data: { ...data, error: `Invalid Edgeware sender: ${decryptedData.sender} != ${data.sender}`} };
+    return formatError(data, `Invalid Edgeware sender: ${decryptedData.sender} != ${data.sender}`);
   } else if (decryptedData.identityHash !== computedIdentityHash) {
-    return { success: false, data: { ...data, error: `Invalid identity hash: ${decryptedData.identityHash} != ${computedIdentityHash}`} };
+    return formatError(data, `Invalid identity hash: ${decryptedData.identityHash} != ${computedIdentityHash}`);
   }
 
   return { success: true, data: data }
 };
 
 const submitTransaction = async (remoteUrlString: string, identityHashes: Array<Hash>, approve: boolean) =>  {
+  if (identityHashes.length === 0) return;
+
+  console.log(`III | Submitting ${(approve) ? 'verify' : 'deny'} transaction: ${identityHashes}`);
   const cArgs: CodecArg[] = [identityHashes, process.env.VERIFIER_INDEX];
   const api = await initApi(remoteUrlString);
   const suri = `${process.env.MNEMONIC_PHRASE}${process.env.DERIVATION_PATH}`;
-  const keyring = new Keyring({ type: 'ed25519' });
+  const keyring = new Keyring({
+    type: (process.env.DERIVED_KEY_TYPE === 'ed25519') ? 'ed25519' : 'sr25519'
+  });
   const pair = keyring.addFromUri(suri);
-  console.log(`Sending tx from verifier: ${pair.address()}`);
+  console.log(`III | Sending tx from verifier: ${pair.address()}`);
   const nonce = await api.query.system.accountNonce(pair.address());
   const fn = (approve) ? api.tx.identity.verifyMany : api.tx.identity.denyMany;
   return await fn(...cArgs)
   .sign(pair, { nonce })
   .send(async ({ events, status }) => {
-    console.log('Transaction status:', status.type);
+    console.log('III | Transaction status:', status.type);
 
     if (status.isFinalized) {
-      console.log('Completed at block hash', status.value.toHex());
-      console.log('Events:');
+      console.log('III | Completed at block hash', status.value.toHex());
+      console.log('III | Events:');
 
       events.forEach(({ phase, event: { data, method, section } }) => {
-        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+        console.log('III | \t', phase.toString(), `: ${section}.${method}`, data.toString());
       });
     }
   });
