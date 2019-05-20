@@ -8,10 +8,8 @@
   "scripts": {
     "check-types": "tsc",
     "build": "node_modules/@babel/cli/bin/babel.js ./src --out-dir lib --extensions '.ts,.tsx'",
-    "start": "yarn build && node ./lib/index.js -w",
-    "process": "yarn build && node ./lib/index.js -p",
-    "decrypt": "yarn build && node ./lib/index.js -d",
-    "create-gist": "yarn build && node ./lib/index.js -g"
+    "start": "yarn build && node ./lib/index.js",
+    "create-gist": "yarn build && node ./lib/utils/createGist.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
