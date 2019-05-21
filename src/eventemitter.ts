@@ -59,6 +59,7 @@ const processIdentityEvents = async (remoteNodeUrl: string, args) => {
   .filter(e => (e.method === 'Attest'))
   .forEach(e => {
     let data = JSON.parse(e.data);
+    // This contextualizes all data we get from an event
     let parsedData = {
       headerHash: headerHash,
       attestation: hex2a(data[0].slice(2)),

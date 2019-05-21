@@ -9,17 +9,9 @@ import { Text, Hash, Vector } from '@polkadot/types';
 import initApi from '../api';
 import * as db from '../db';
 import { EdgewareIdentityEvent, EventResult, IdentityResponseData } from '../eventemitter';
+import { hashTwo } from '../common';
 
 const IDENTITY_ENCRYPTION_KEY = 'commonwealth-identity-service';
-
-const hashIdentity = (identityType: string, identity: string) => {
-  return blake2AsHex(
-    u8aConcat(
-      new Text(identityType).toU8a(),
-      new Text(identity).toU8a()
-    )
-  );
-}
 
 const getRequestOptions = (gId: string) => ({
   url: `https://api.github.com/gists/${gId}`,
@@ -38,7 +30,6 @@ export const onReceiveEvents = async (remoteUrlString: string, events: Array<Edg
   let promises = events.map(async e => (await onReceiveEvent(remoteUrlString, e)));
   // Unwrap promises
   let processedEvents = await Promise.all(promises);
-  console.log(processedEvents);
   console.log(`III | Processed events: ${JSON.stringify(processedEvents)}`);
   // verify successes
   await submitTransaction(
@@ -66,39 +57,26 @@ const onReceiveEvent = async (remoteUrlString: string, event: EdgewareIdentityEv
   if (!response.data.hasOwnProperty('files')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
   if (!response.data.files.hasOwnProperty('proof')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
   if (!response.data.files.proof.hasOwnProperty('content')) return formatError(event, `Malformed response data: ${JSON.stringify(response.data)}`);
-
+  // Check for required gist description
   if (response.data.description !== 'Edgeware Identity Attestation') {
     return formatError(event, `Incorrect attestation description: ${response.data.description}`);
   }
-
-  return processEvent(remoteUrlString, {
-    identityType: 'github',
-    identity: response.data.owner.login.toString(),
-    identityHash: event.identityHash,
-    sender: event.sender,
-    proof: response.data.files.proof.content.toString(),
-    description: response.data.description,
-    attestation: event.attestation,
-    error: undefined,
-  });
-};
-
-const processEvent = (remoteUrlString: string, data: IdentityResponseData) => {
-  const bytes = AES.decrypt(data.proof, IDENTITY_ENCRYPTION_KEY);
-  const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-  const computedIdentityHash = hashIdentity(data.identityType, data.identity);
-  // Apply validation checks
-  if (decryptedData.identityType !== 'github') {
-    return formatError(data, `Invalid identity type: ${decryptedData.identityType}`);
-  } else if (decryptedData.identity !== data.identity) {
-    return formatError(data, `Invalid identity: ${decryptedData.identity} != ${data.identity}`);
-  } else if (decryptedData.sender !== data.sender) {
-    return formatError(data, `Invalid Edgeware sender: ${decryptedData.sender} != ${data.sender}`);
-  } else if (decryptedData.identityHash !== computedIdentityHash) {
-    return formatError(data, `Invalid identity hash: ${decryptedData.identityHash} != ${computedIdentityHash}`);
+  // Check whether the github account from the gist matches the event's target identity
+  if (event.identity !== response.data.owner.login.toString()) {
+    return formatError(event, `Identity mismatch: $${response.data.owner.login.toString()} != ${event.identity}`);
   }
-
-  return { success: true, data: data }
+  // Extract out the hash from the content
+  const proofDataHash = response.data.files.proof.content.toString()
+    .match(new RegExp('II (.*) II'))[1];
+  // Hash event data for verifying hash equality
+  const computedIdentityHash = hashTwo(event.identityType, event.identity);
+  const computedTotalHash = hashTwo(event.sender, computedIdentityHash);
+  // Check if the computed hash matches the posted hash
+  if (proofDataHash !== computedTotalHash) {
+    return formatError(event, `Identity mismatch: ${proofDataHash} != ${computedIdentityHash}`);
+  }
+  // Return the event upon success
+  return { success: true, data: event };
 };
 
 const submitTransaction = async (remoteUrlString: string, identityHashes: Array<Hash>, approve: boolean) =>  {

@@ -1,4 +1,5 @@
 import { EdgewareIdentityEvent } from "../eventemitter";
+import { hashTwo } from '../common';
 
 // https://twitter.com/drew___stone/status/1128392194434449408
 

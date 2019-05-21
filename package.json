@@ -9,7 +9,8 @@
     "check-types": "tsc",
     "build": "node_modules/@babel/cli/bin/babel.js ./src --out-dir lib --extensions '.ts,.tsx'",
     "start": "yarn build && node ./lib/index.js",
-    "create-gist": "yarn build && node ./lib/utils/createGist.js"
+    "create-gist": "yarn build && node ./lib/scripts/createGist.js",
+    "create-tweet": "yarn build && node ./lib/scripts/createTweet.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
@@ -35,6 +36,10 @@
     "dotenv": "^6.2.0",
     "github-api": "^3.0.0",
     "mongodb": "^3.1.13",
-    "rxjs": "^6.4.0"
+    "oauth": "^0.9.15",
+    "rxjs": "^6.4.0",
+    "twit": "^2.2.11",
+    "twitter": "^1.7.1",
+    "twitter-node-client": "^0.0.6"
   }
 }

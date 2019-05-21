@@ -1,16 +1,6 @@
 require('dotenv').config();
-import { blake2AsHex } from "@polkadot/util-crypto";
-import { u8aConcat } from "@polkadot/util";
-import AES from 'crypto-js/aes';
 import axios from 'axios';
-import { Text } from '@polkadot/types';
-
-const ENCRYPTION_KEY = 'commonwealth-identity-service';
-
-export const encrypt = (data) => {
-  const cipherText = AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString();
-  return cipherText;
-}
+import { hashTwo } from '../common';
 
 const getRequestOptions = (gistData: any) => ({
   url: 'https://api.github.com/gists',
@@ -22,18 +12,15 @@ const getRequestOptions = (gistData: any) => ({
   },
 });
 
+
 export const createGist = async (data) => {
-  let identityHash = blake2AsHex(
-    u8aConcat(
-      new Text(data.identityType).toU8a(),
-      new Text(data.identity).toU8a()
-    )
-  );
+  let identityHash = hashTwo(data.identityType, data.identity);
+  let totalHash = hashTwo(data.sender, identityHash);
 
   const gistData = {
     public: true,
     description: 'Edgeware Identity Attestation',
-    files: { proof: { content: encrypt({ identityHash: identityHash, ...data }) } }
+    files: { proof: { content: `Attesting to my edgeware account: II ${totalHash} II` } },
   };
 
   try {
