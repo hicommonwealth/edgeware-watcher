@@ -24,58 +24,33 @@ MONGO_COLLECTION=event_data
 VERIFIER_INDEX=0
 MNEMONIC_PHRASE="bottom drive obey lake curtain smoke basket hold race lonely fit walk"
 DERIVATION_PATH=//Alice
+DERIVED_KEY_TYPE=sr25519
 
 # Github config for creating gists
 GITHUB_USERNAME=blahblah
 GITHUB_PASSWORD=1234567890
+# Twitter config
+TWITTER_CONSUMER_KEY=
+TWITTER_CONSUMER_SECRET=
+TWITTER_ACCESS_TOKEN=
+TWITTER_ACCESS_TOKEN_SECRET=
 ```
 # Usage
 Ensure you have mongodb installed locally or have a remote node you can configure with in the configuration settings above. Install the node modules using `yarn` or `npm`.
-To run the watcher (which by default polls for all events and prints them)
+
+To run the watcher:
 ```
 yarn start
 ```
-To run the processor (only Github attestations currently)
-```
-yarn process
 ```
 
 # Github Attestations
-A github attestation is simply the gist ID. An example of a valid gist should contain the following properties. It should first and foremost be public and have the stated description. It should then contain a proof with an encrypted blob of content defined below this current snippet.
-```
-{
-  public: true,
-  description: 'Edgeware Identity Attestation',
-  files: {
-    proof: {
-      content: encryptedContent,
-    }
-  },
-  ...
-}
-```
-The decrypted content should must contain the following data to be valid: the identityType (github), the github identity reported on-chain which must match that of the creator of the gist, the Edgeware base 58 encoded public address, and the Blake2 hash of the concatenated identity type and identity.
-```
-{
-  identityHash: "0x995e957d368c817e5d64eab9757991a10001d8c6f3733646824da2c006ecc64e",
-  identityType: "github",
-  identity: "drewstone",
-  sender: "5ERmnP13Gx8ybq64pi2LEGWVqF2AoRCM83UovE9537uRvLA8",
-}
-```
-The has can be computed using the following snippet:
-```
-import { u8aConcat } from '@polkadot/util';
-import { blake2AsHex } from '@polkadot/util-crypto';
+A github attestation is the Gist ID.
 
-let identityHash = blake2AsHex(
-  u8aConcat(
-    new Text(data.identityType).toU8a(),
-    new Text(data.identity).toU8a()
-  )
-)
-```
+# Twitter Attestations
+A twitter attestation is the Twitter tweet ID.
 
 # Support checklist
 The `edgeware-watcher` supports the following identity attestation events
 [x] - Github attestations
+[x] - Twitter attestations
