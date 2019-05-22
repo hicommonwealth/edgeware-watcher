@@ -41,45 +41,23 @@ export const insert = async function(data) {
   await db.collection(collectionName).insertOne(data);
 }
 
-export const findUnprocessedAttestations = async function() {
-  if(!state.conn) {
-    await connect();
-  }
-
-  const db = state.conn.db(process.env.MONGO_DB);
-  return await db.collection(collectionName)
-    .find({
-      section: 'identity',
-      method: 'Attest',
-      $or: [
-        { processed: { $exists: false } },
-        { processed: false},
-      ],
-    })
-    .sort( [['_id', -1]] )
-    .toArray()
-}
-
-export const processAttestations = async function(attestations) {
+export const find = async function(recordKey) {
   if (!state.conn) {
     await connect();
   }
 
-  return await Promise.all(attestations.map(processAttestation));
+
+  const db = state.conn.db(process.env.MONGO_DB);
+  await db.collection(collectionName).find(recordKey);
 }
 
-export const processAttestation = async function(attestation) {
-  if(!state.conn) {
+export const exists = async function(recordKey) {
+  if (!state.conn) {
     await connect();
   }
 
   const db = state.conn.db(process.env.MONGO_DB);
-  return await db.collection(collectionName)
-    .updateOne(
-      { _id: attestation._id},
-      { $set: {
-          processed: true,
-        }
-      }
-    );
+  console.log(`Checking existance of ${JSON.stringify(recordKey)}`);
+  const res = await db.collection(collectionName).find(recordKey).toArray();
+  return (res.length > 0);
 }
