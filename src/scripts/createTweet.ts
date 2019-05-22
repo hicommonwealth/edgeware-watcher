@@ -19,7 +19,6 @@ export const createTweet = async (data) => {
   let identityHash = hashTwo(data.identityType, data.identity);
   let totalHash = hashTwo(data.sender, identityHash);
   const content = `Attesting to my edgeware account: II ${totalHash} II`;
-  //(url, oauth_token, oauth_token_secret, post_body, post_content_type, callback 
   T.post('statuses/update', {status: content}, tweetCallback);
 }
 
